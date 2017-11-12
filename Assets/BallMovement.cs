@@ -2,19 +2,31 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BallMovement : MonoBehaviour {
     private Vector3 startPosition;
     private Vector3 endPosition;
+    private Vector3 originalPosition;
+
+    private Rigidbody rb;
 
     private GameObject arCamera;
     private GameObject camera;
+    public Slider slider;
 
     private bool moving = false;
     private float movingSpeed = 0.15F;
     private float progressMoving = 0.0F;
     private float intensity = 1F;
     private float progress;
+    private float progressTotal;
+    private float upFactor = 300F;
+    private float speedFactor = 100F;
+    private float startDragtime;
+
+    private float maxX = 8.5F;
+    private float maxZ = 5F;
 
     float distance;
     bool dragging = false;
@@ -24,144 +36,82 @@ public class BallMovement : MonoBehaviour {
         Debug.Log(transform.position);
         arCamera = GameObject.Find("ARCamera");
         camera = GameObject.Find("Camera");
-    }
-	
-	// Update is called once per frame
-	void Update () {
-        /*if (dragging)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            Vector3 rayPoint = ray.GetPoint(distance);
-            transform.position = Vector3.Lerp(this.transform.position, rayPoint, Time.deltaTime);
-        }*/
+        rb = transform.GetComponent<Rigidbody>();
 
-        //Debug.Log("ar " + arCamera.transform.position);
-        //Debug.Log("cam " + camera.transform.position);
-        //Debug.Log(transform.position);
-        if (moving)
-        {
-            processMovement();
-        }
+        originalPosition = transform.position;
+        
     }
 
-    void OnMouseDown()
+    private void OnMouseDown()
     {
         distance = Vector3.Distance(transform.position, Camera.main.transform.position);
-
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        Vector3 rayPoint = ray.GetPoint(distance);
-
-        startPosition = rayPoint;
-        //dragging = true;
+        dragging = true;
+        startDragtime = Time.time;
     }
 
-    void OnMouseUp()
+    private void OnMouseUp()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        Vector3 rayPoint = ray.GetPoint(distance);
-
-        endPosition = rayPoint;
-        //dragging = false;
-
-        moving = true;
-    }
-
-    private void processMovement()
-    {
+        rb.useGravity = true;
         
-        progress = progressMoving * movingSpeed * intensity;
-        transform.position = Vector3.Lerp(startPosition, endPosition, progress);
+        dragging = false;
+        moving = true;
 
-        Debug.Log(progress);
-        progressMoving += 0.1F;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        Vector3 rayPoint = ray.GetPoint(distance);
+        endPosition = rayPoint;
+        endPosition.y = originalPosition.y;
+        
+        float dragPower = calculateDragPower();
+        rb.AddForce(new Vector3(1, 0, 0) * (endPosition.x - startPosition.x)  * dragPower * speedFactor);
+        rb.AddForce(new Vector3(0, 0, 1) * (endPosition.z - startPosition.z)  * dragPower * speedFactor);
+        rb.AddForce(new Vector3(0, 1, 0) * slider.value * upFactor);
+    }
 
-        if (progress >= 1.0F)
+    private float calculateDragPower()
+    {
+        float timeDiff = Time.time - startDragtime;
+
+        Debug.Log("timeDiff: " + timeDiff);
+        
+        // TODO bessere Berechnung
+        if (timeDiff <= 2)
         {
-            //transform.parent = otherTarget;
-            //swap(ref currentTarget, ref otherTarget);
+            return 1F;
+        }
+        else
+        {
+            return 0.5F;
+        }
+    }
+
+    private void Update()
+    {
+
+        if (transform.position.y <= -10)
+        {
+            // TODO animationclip für spawning
+
+            // reset motion
+            rb.velocity = new Vector3(0,0,0);
+            rb.angularVelocity = new Vector3(0, 0, 0);
+            rb.useGravity = false;
+
+            // calculate new position
+            resetPosition();
 
             moving = false;
-            progressMoving = 0.0F;
-            progress = 0.0F;
         }
     }
 
-    /*void OnMouseDown()
+    private void resetPosition()
     {
-        if (Input.touchCount == 1) // user is touching the screen with a single touch
-        {
-            Touch touch = Input.GetTouch(0); // get the touch
-            if (touch.phase == TouchPhase.Began) //check for the first touch
-            {
-                Debug.Log("fwf" + touch.position);
-                Debug.Log("wqfpq" + transform.position);
-                Debug.Log("wwwq" + Camera.main.ScreenToWorldPoint(touch.position));
-                Debug.Log("cx" + Camera.main.WorldToScreenPoint(transform.position));
-                startPosition = touch.position;
-                Debug.Log("touched");
-            }
-        }
-        else if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log("a" + Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            /*Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
+        Debug.Log("orig: " + originalPosition);
 
-            if (Physics.Raycast(ray, out hit))
-            {
-                Debug.Log("b " + hit.point);
-            }/
+        Vector3 newPosition = new Vector3(UnityEngine.Random.Range(-maxX, maxX), 0.7F, UnityEngine.Random.Range(-maxZ, maxZ));
+        newPosition.y = originalPosition.y;
 
-            startPosition = Input.mousePosition;
-            Debug.Log("mouse down");
-        }
-        //Debug.Log(startPosition);
+        transform.position = newPosition;
+        Debug.Log("new: " + newPosition);
+        startPosition = newPosition;
     }
-
-    void OnMouseUp()
-    {
-        if (Input.touchCount == 1) // user is touching the screen with a single touch
-        {
-            Touch touch = Input.GetTouch(0); // get the touch
-            if (touch.phase == TouchPhase.Ended) //check for the first touch
-            {
-                Debug.Log("22fwf" + touch.position);
-                Debug.Log("22wqfpq" + transform.position);
-                Debug.Log("22wwwq" + Camera.main.ScreenToWorldPoint(touch.position));
-                Debug.Log("22cx" + Camera.main.WorldToScreenPoint(transform.position));
-                endPosition = touch.position;
-                moving = true;
-                Debug.Log("touch release");
-            }
-        }
-        else if (Input.GetMouseButtonUp(0))
-        {
-            //endPosition = Input.mousePosition;
-            //endPosition = 
-            //endPosition.y = startPosition.y;
-            //endPosition.z = startPosition.z;
-            
-            Debug.Log("xx " + Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit))
-            {
-                Debug.Log("c " + hit.point);
-            }
-            moving = true;
-
-            Debug.Log("mouse release");
-        }
-
-        //this.GetComponent<Rigidbody>().velocity += this.transform.forward * 1;
-        
-
-        //Debug.Log(endPosition);
-    }*/
-
-    /*void OnMouseUp()
-    {
-        this.GetComponent<Rigidbody>().velocity += this.transform.forward * 5;
-    }*/
 }
