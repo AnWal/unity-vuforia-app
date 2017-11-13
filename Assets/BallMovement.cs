@@ -29,6 +29,9 @@ public class BallMovement : MonoBehaviour
     private float maxX = 8.5F;
     private float maxZ = 5F;
 
+    private float startMovementTime;
+    private float resetBallAfterSeconds = 7;
+
     float distance;
     bool dragging = false;
 
@@ -60,6 +63,7 @@ public class BallMovement : MonoBehaviour
 
     private void OnMouseUp()
     {
+        startMovementTime = Time.time;
         rb.useGravity = true;
 
         dragging = false;
@@ -100,13 +104,16 @@ public class BallMovement : MonoBehaviour
 
         if (transform.position.y <= -10)
         {
-            // TODO animationclip für spawning
+            Debug.Log("reseting after leaving area");
 
-            // reset motion
-            rb.velocity = new Vector3(0, 0, 0);
-            rb.angularVelocity = new Vector3(0, 0, 0);
-            rb.useGravity = false;
+            // calculate new position
+            resetPosition();
 
+            moving = false;
+        }
+        else if (moving && (Time.time - startMovementTime ) > resetBallAfterSeconds)
+        {
+            Debug.Log("reseting after timeout");
             // calculate new position
             resetPosition();
 
@@ -120,13 +127,16 @@ public class BallMovement : MonoBehaviour
 
         Vector3 newPosition = new Vector3(UnityEngine.Random.Range(-maxX, maxX), 0.7F, UnityEngine.Random.Range(-maxZ, maxZ));
         newPosition.y = originalPosition.y;
-   
+        rb.useGravity = false;
+
         transform.position = newPosition;
         Debug.Log("new: " + newPosition);
         startPosition = newPosition;
         triggered = false;
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+        moving = false;
+        startMovementTime = 0.0F;
     }
 
     void OnTriggerEnter(Collider other)
