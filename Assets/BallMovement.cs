@@ -16,7 +16,7 @@ public class BallMovement : MonoBehaviour
     private GameObject camera;
     public Slider slider;
 
-    private bool moving = false;
+    public bool moving = false;
     private float movingSpeed = 0.15F;
     private float progressMoving = 0.0F;
     private float intensity = 1F;
@@ -34,6 +34,8 @@ public class BallMovement : MonoBehaviour
 
     public bool triggered = false;
     private int score = 0;
+    public GameObject keeper;
+    private GoalKeeper goalKeeper;
 
     // Use this for initialization
     void Start()
@@ -44,6 +46,8 @@ public class BallMovement : MonoBehaviour
         rb = transform.GetComponent<Rigidbody>();
 
         originalPosition = transform.position;
+        goalKeeper = keeper.GetComponent<GoalKeeper>();
+
 
     }
 
@@ -70,6 +74,8 @@ public class BallMovement : MonoBehaviour
         rb.AddForce(new Vector3(1, 0, 0) * (endPosition.x - startPosition.x) * dragPower * speedFactor);
         rb.AddForce(new Vector3(0, 0, 1) * (endPosition.z - startPosition.z) * dragPower * speedFactor);
         rb.AddForce(new Vector3(0, 1, 0) * slider.value * upFactor);
+
+        goalKeeper.animate = true;
     }
 
     private float calculateDragPower()
@@ -114,11 +120,13 @@ public class BallMovement : MonoBehaviour
 
         Vector3 newPosition = new Vector3(UnityEngine.Random.Range(-maxX, maxX), 0.7F, UnityEngine.Random.Range(-maxZ, maxZ));
         newPosition.y = originalPosition.y;
-
+   
         transform.position = newPosition;
         Debug.Log("new: " + newPosition);
         startPosition = newPosition;
         triggered = false;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
     }
 
     void OnTriggerEnter(Collider other)
@@ -129,7 +137,7 @@ public class BallMovement : MonoBehaviour
             triggered = true;
             score++;
             StartCoroutine(WaitAndReset());
-        }
+        } 
     }
 
     void OnGUI()
