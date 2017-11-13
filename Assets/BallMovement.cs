@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BallMovement : MonoBehaviour {
+public class BallMovement : MonoBehaviour
+{
     private Vector3 startPosition;
     private Vector3 endPosition;
     private Vector3 originalPosition;
@@ -31,15 +32,19 @@ public class BallMovement : MonoBehaviour {
     float distance;
     bool dragging = false;
 
+    public bool triggered = false;
+    private int score = 0;
+
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
         Debug.Log(transform.position);
         arCamera = GameObject.Find("ARCamera");
         camera = GameObject.Find("Camera");
         rb = transform.GetComponent<Rigidbody>();
 
         originalPosition = transform.position;
-        
+
     }
 
     private void OnMouseDown()
@@ -52,7 +57,7 @@ public class BallMovement : MonoBehaviour {
     private void OnMouseUp()
     {
         rb.useGravity = true;
-        
+
         dragging = false;
         moving = true;
 
@@ -60,10 +65,10 @@ public class BallMovement : MonoBehaviour {
         Vector3 rayPoint = ray.GetPoint(distance);
         endPosition = rayPoint;
         endPosition.y = originalPosition.y;
-        
+
         float dragPower = calculateDragPower();
-        rb.AddForce(new Vector3(1, 0, 0) * (endPosition.x - startPosition.x)  * dragPower * speedFactor);
-        rb.AddForce(new Vector3(0, 0, 1) * (endPosition.z - startPosition.z)  * dragPower * speedFactor);
+        rb.AddForce(new Vector3(1, 0, 0) * (endPosition.x - startPosition.x) * dragPower * speedFactor);
+        rb.AddForce(new Vector3(0, 0, 1) * (endPosition.z - startPosition.z) * dragPower * speedFactor);
         rb.AddForce(new Vector3(0, 1, 0) * slider.value * upFactor);
     }
 
@@ -72,7 +77,7 @@ public class BallMovement : MonoBehaviour {
         float timeDiff = Time.time - startDragtime;
 
         Debug.Log("timeDiff: " + timeDiff);
-        
+
         // TODO bessere Berechnung
         if (timeDiff <= 2)
         {
@@ -92,7 +97,7 @@ public class BallMovement : MonoBehaviour {
             // TODO animationclip für spawning
 
             // reset motion
-            rb.velocity = new Vector3(0,0,0);
+            rb.velocity = new Vector3(0, 0, 0);
             rb.angularVelocity = new Vector3(0, 0, 0);
             rb.useGravity = false;
 
@@ -113,5 +118,34 @@ public class BallMovement : MonoBehaviour {
         transform.position = newPosition;
         Debug.Log("new: " + newPosition);
         startPosition = newPosition;
+        triggered = false;
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.name == "GoalLine" && !triggered)
+        {
+            Debug.Log("GOAL!!!");
+            triggered = true;
+            score++;
+            StartCoroutine(WaitAndReset());
+        }
+    }
+
+    void OnGUI()
+    {
+        GUI.Label(new Rect(10, 10, Screen.width / 5, Screen.height / 6), "SCORE: " + score); 
+        if (GUI.Button(new Rect(Screen.width - (Screen.width / 6), 10, Screen.width / 6, Screen.height / 6), "RESTART"))
+        {
+            triggered = false;
+            score = 0;
+            resetPosition();
+        }
+    }
+
+    IEnumerator WaitAndReset()
+    {
+        yield return new WaitForSeconds(2);
+        resetPosition();
     }
 }
